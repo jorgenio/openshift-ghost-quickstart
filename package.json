@@ -8,7 +8,9 @@
     "bugs": "https://github.com/openshift-quickstart/openshift-ghost-quickstart/issues",
     "main": "index.js",
     "scripts": {
-        "start": "node index"
+        "start": "node index",
+        "init": "yarn global add knex-migrator ember-cli grunt-cli && yarn install && grunt init || true"
+
     },
     "engines": {
         "node": "~0.10.0 || ~0.12.0",
