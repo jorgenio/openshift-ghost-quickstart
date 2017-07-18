@@ -2,8 +2,11 @@ var _               = require('lodash'),
     http            = require('http'),
     xml             = require('xml'),
     config          = require('../../config'),
+    utils           = require('../../utils'),
     errors          = require('../../errors'),
+    logging         = require('../../logging'),
     events          = require('../../events'),
+    i18n            = require('../../i18n'),
     pingList;
 
 // ToDo: Make this configurable
@@ -18,10 +21,9 @@ pingList = [{
 function ping(post) {
     var pingXML,
         title = post.title,
-        url = config.urlFor('post', {post: post}, true);
+        url = utils.url.urlFor('post', {post: post}, true);
 
-    // Only ping when in production and not a page
-    if (process.env.NODE_ENV !== 'production' || post.page || config.isPrivacyDisabled('useRpcPing')) {
+    if (post.page || config.isPrivacyDisabled('useRpcPing')) {
         return;
     }
 
@@ -65,23 +67,28 @@ function ping(post) {
 
         req = http.request(options);
         req.write(pingXML);
-        req.on('error', function (error) {
-            errors.logError(
-                error,
-                'Pinging services for updates on your blog failed, your blog will continue to function.',
-                'If you get this error repeatedly, please seek help on http://support.ghost.org.'
-            );
+
+        req.on('error', function handleError(err) {
+            logging.error(new errors.GhostError({
+                err: err,
+                message: err.message,
+                context: i18n.t('errors.data.xml.xmlrpc.pingUpdateFailed.error'),
+                help: i18n.t('errors.data.xml.xmlrpc.pingUpdateFailed.help', {url: 'http://support.ghost.org'})
+            }));
         });
+
         req.end();
     });
 }
 
-function init() {
-    events.on('post.published', function (model) {
-        ping(model.toJSON());
-    });
+function listener(model) {
+    ping(model.toJSON());
+}
+
+function listen() {
+    events.on('post.published', listener);
 }
 
 module.exports = {
-    init: init
+    listen: listen
 };
